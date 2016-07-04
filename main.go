@@ -14,18 +14,21 @@ var (
 	delta          int
 	modToken       bool
 	modAccount     bool
+	confFileName   string
 )
 
 func init() {
 	flagModToken := flag.Bool("token", false, "Add token")
 	flagModAccount := flag.Bool("account", false, "Add account")
 	flagGoogleCredPath := flag.String("g", "", "Google JWT")
+	flagConfFilePath := flag.String("c", "conf.json", "Config file")
 	flagDelta := flag.Int("d", 10, "Delta")
 	flag.Parse()
 	googleCredPath = *flagGoogleCredPath
 	delta = *flagDelta
 	modToken = *flagModToken
 	modAccount = *flagModAccount
+	confFileName = flagConfFilePath
 }
 
 func Token() {

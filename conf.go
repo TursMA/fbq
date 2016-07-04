@@ -6,10 +6,6 @@ import (
 	"io/ioutil"
 )
 
-const (
-	confFileName string = "conf.json"
-)
-
 type ConfAccount struct {
 	Id  string `json:"id"`
 	App string `json:"client_id"`
