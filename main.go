@@ -28,7 +28,7 @@ func init() {
 	delta = *flagDelta
 	modToken = *flagModToken
 	modAccount = *flagModAccount
-	confFileName = flagConfFilePath
+	confFileName = *flagConfFilePath
 }
 
 func Token() {
