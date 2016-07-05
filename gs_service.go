@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	storage "google.golang.org/api/storage/v1"
 	"log"
 	"net/http"

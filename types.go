@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	bigquery "google.golang.org/api/bigquery/v2"
-	// "io/ioutil"
-	"log"
-	"net/http"
 	"net/url"
 	"time"
 )
@@ -53,19 +50,9 @@ func (a *FBApp) getRenewUrl(previousToken string) string {
 }
 
 func (a *FBApp) RenewToken(s string) *FBAccessToken {
-	resp, err := http.Get(a.getRenewUrl(s))
-	catchError(err)
-	if resp.StatusCode != 200 {
-		log.Fatalln("Error reading the token")
-	}
+	resp := HttpGet(a.getRenewUrl(s))
 	defer resp.Body.Close()
-	// body, _ := ioutil.ReadAll(resp.Body)
 	dec := json.NewDecoder(resp.Body)
-	//	var d struct {
-	//		AccessToken string `json:"access_token"`
-	//		TokenType   string `json:"token_type"`
-	//		ExpiresIn   int32  `json:"expires_in"`
-	//	}
 	d := new(FBAccessToken)
 	catchError(dec.Decode(d))
 	return d
@@ -139,9 +126,10 @@ func (d *DailyCatch) BQAdInsightSchema() *bigquery.TableSchema {
 			{Mode: "NULLABLE", Name: "ad_id", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "ad_name", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "impressions", Type: "STRING"},
+			{Mode: "NULLABLE", Name: "unique_impressions", Type: "INTEGER"},
 			{Mode: "NULLABLE", Name: "clicks", Type: "INTEGER"},
+			{Mode: "NULLABLE", Name: "unique_clicks", Type: "INTEGER"},
 			{Mode: "NULLABLE", Name: "spend", Type: "FLOAT"},
-			{Mode: "NULLABLE", Name: "cost_per_unique_click", Type: "FLOAT"},
 		},
 	}
 }
@@ -193,20 +181,21 @@ func (a *FBAd) Store() {
 }
 
 type FBAdInsight struct {
-	DateStart          string  `json:"date_start"`
-	DateStop           string  `json:"date_stop"`
-	AccountId          string  `json:"account_id"`
-	AccountName        string  `json:"account_name"`
-	CampaignId         string  `json:"campaign_id"`
-	CampaignName       string  `json:"campaign_name"`
-	AdSetId            string  `json:"adset_id"`
-	AdSetName          string  `json:"adset_name"`
-	AdId               string  `json:"ad_id"`
-	AdName             string  `json:"ad_name"`
-	Impressions        string  `json:"impressions"`
-	Clicks             int32   `json:"clicks"`
-	Spend              float32 `json:"spend"`
-	CostPerUniqueClick float32 `json:"cost_per_unique_click"`
+	DateStart         string  `json:"date_start"`
+	DateStop          string  `json:"date_stop"`
+	AccountId         string  `json:"account_id"`
+	AccountName       string  `json:"account_name"`
+	CampaignId        string  `json:"campaign_id"`
+	CampaignName      string  `json:"campaign_name"`
+	AdSetId           string  `json:"adset_id"`
+	AdSetName         string  `json:"adset_name"`
+	AdId              string  `json:"ad_id"`
+	AdName            string  `json:"ad_name"`
+	Impressions       string  `json:"impressions"`
+	UniqueImpressions int32   `json:"unique_impressions"`
+	Clicks            int32   `json:"clicks"`
+	UniqueClicks      int32   `json:"unique_clicks"`
+	Spend             float32 `json:"spend"`
 }
 
 func (a *FBAdInsight) getFileName() string {
@@ -241,7 +230,7 @@ func (s *FBAdService) getAdsFields() string {
 }
 
 func (s *FBAdService) getAdInsightsFields() string {
-	return "date_start,date_stop,account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,clicks,spend,cost_per_unique_click"
+	return "date_start,date_stop,account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,unique_impressions,clicks,unique_clicks,spend"
 }
 
 func (s *FBAdService) getAdsURL() string {
@@ -262,11 +251,7 @@ func (s *FBAdService) getInsightsURL(date time.Time) string {
 }
 
 func (s *FBAdService) GetAdsPage(url string) {
-	resp, err := http.Get(url)
-	catchError(err)
-	if resp.StatusCode != 200 {
-		log.Fatalf("Error reading the insights: %v\n", url)
-	}
+	resp := HttpGet(url)
 	defer resp.Body.Close()
 	dec := json.NewDecoder(resp.Body)
 	var d struct {
@@ -283,11 +268,7 @@ func (s *FBAdService) GetAdsPage(url string) {
 }
 
 func (s *FBAdService) GetAdInsightsPage(url string) {
-	resp, err := http.Get(url)
-	catchError(err)
-	if resp.StatusCode != 200 {
-		log.Fatalf("Error reading the insights: %v\n", url)
-	}
+	resp := HttpGet(url)
 	defer resp.Body.Close()
 	dec := json.NewDecoder(resp.Body)
 	var d struct {
