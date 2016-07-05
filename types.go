@@ -118,13 +118,13 @@ func (d *DailyCatch) BQAdInsightSchema() *bigquery.TableSchema {
 			{Mode: "NULLABLE", Name: "date_start", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "date_stop", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "account_id", Type: "STRING"},
-			{Mode: "NULLABLE", Name: "account_name", Type: "STRING"},
-			{Mode: "NULLABLE", Name: "campaign_id", Type: "STRING"},
-			{Mode: "NULLABLE", Name: "campaign_name", Type: "STRING"},
-			{Mode: "NULLABLE", Name: "adset_id", Type: "STRING"},
-			{Mode: "NULLABLE", Name: "adset_name", Type: "STRING"},
+			// {Mode: "NULLABLE", Name: "account_name", Type: "STRING"},
+			// {Mode: "NULLABLE", Name: "campaign_id", Type: "STRING"},
+			// {Mode: "NULLABLE", Name: "campaign_name", Type: "STRING"},
+			// {Mode: "NULLABLE", Name: "adset_id", Type: "STRING"},
+			// {Mode: "NULLABLE", Name: "adset_name", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "ad_id", Type: "STRING"},
-			{Mode: "NULLABLE", Name: "ad_name", Type: "STRING"},
+			// {Mode: "NULLABLE", Name: "ad_name", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "impressions", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "unique_impressions", Type: "INTEGER"},
 			{Mode: "NULLABLE", Name: "clicks", Type: "INTEGER"},
@@ -181,16 +181,16 @@ func (a *FBAd) Store() {
 }
 
 type FBAdInsight struct {
-	DateStart         string  `json:"date_start"`
-	DateStop          string  `json:"date_stop"`
-	AccountId         string  `json:"account_id"`
-	AccountName       string  `json:"account_name"`
-	CampaignId        string  `json:"campaign_id"`
-	CampaignName      string  `json:"campaign_name"`
-	AdSetId           string  `json:"adset_id"`
-	AdSetName         string  `json:"adset_name"`
-	AdId              string  `json:"ad_id"`
-	AdName            string  `json:"ad_name"`
+	DateStart string `json:"date_start"`
+	DateStop  string `json:"date_stop"`
+	AccountId string `json:"account_id"`
+	// AccountName       string  `json:"account_name"`
+	// CampaignId        string  `json:"campaign_id"`
+	// CampaignName      string  `json:"campaign_name"`
+	// AdSetId           string  `json:"adset_id"`
+	// AdSetName         string  `json:"adset_name"`
+	AdId string `json:"ad_id"`
+	// AdName            string  `json:"ad_name"`
 	Impressions       string  `json:"impressions"`
 	UniqueImpressions int32   `json:"unique_impressions"`
 	Clicks            int32   `json:"clicks"`
@@ -230,7 +230,8 @@ func (s *FBAdService) getAdsFields() string {
 }
 
 func (s *FBAdService) getAdInsightsFields() string {
-	return "date_start,date_stop,account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,unique_impressions,clicks,unique_clicks,spend"
+	// return "date_start,date_stop,account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,unique_impressions,clicks,unique_clicks,spend"
+	return "date_start,date_stop,account_id,ad_id,impressions,unique_impressions,clicks,unique_clicks,spend"
 }
 
 func (s *FBAdService) getAdsURL() string {
