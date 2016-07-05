@@ -79,7 +79,7 @@ func Run() {
 		as := newFBAdService(dc, a, t)
 		wg.Add(1)
 		go func() {
-			as.GetAds()
+			// as.GetAds()
 			as.GetAdInsights()
 			as.Store()
 			wg.Done()

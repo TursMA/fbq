@@ -126,12 +126,18 @@ func (d *DailyCatch) BQAdInsightSchema() *bigquery.TableSchema {
 		Fields: []*bigquery.TableFieldSchema{
 			{Mode: "NULLABLE", Name: "date_start", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "date_stop", Type: "STRING"},
-			{Mode: "NULLABLE", Name: "impressions", Type: "STRING"},
-			{Mode: "NULLABLE", Name: "spend", Type: "FLOAT"},
 			{Mode: "NULLABLE", Name: "account_id", Type: "STRING"},
+			{Mode: "NULLABLE", Name: "account_name", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "campaign_id", Type: "STRING"},
-			{Mode: "NULLABLE", Name: "adset_id", Type: "INTEGER"},
+			{Mode: "NULLABLE", Name: "campaign_name", Type: "STRING"},
+			{Mode: "NULLABLE", Name: "adset_id", Type: "STRING"},
+			{Mode: "NULLABLE", Name: "adset_name", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "ad_id", Type: "STRING"},
+			{Mode: "NULLABLE", Name: "ad_name", Type: "STRING"},
+			{Mode: "NULLABLE", Name: "impressions", Type: "STRING"},
+			{Mode: "NULLABLE", Name: "clicks", Type: "INTEGER"},
+			{Mode: "NULLABLE", Name: "spend", Type: "FLOAT"},
+			{Mode: "NULLABLE", Name: "cost_per_unique_click", Type: "FLOAT"},
 		},
 	}
 }
@@ -183,14 +189,20 @@ func (a *FBAd) Store() {
 }
 
 type FBAdInsight struct {
-	DateStart   string  `json:"date_start"`
-	DateStop    string  `json:"date_stop"`
-	Impressions string  `json:"impressions"`
-	Spend       float32 `json:"spend"`
-	AccountId   string  `json:"account_id"`
-	CampaignId  string  `json:"campaign_id"`
-	AdSetId     string  `json:"adset_id"`
-	AdId        string  `json:"ad_id"`
+	DateStart          string  `json:"date_start"`
+	DateStop           string  `json:"date_stop"`
+	AccountId          string  `json:"account_id"`
+	AccountName        string  `json:"account_name"`
+	CampaignId         string  `json:"campaign_id"`
+	CampaignName       string  `json:"campaign_name"`
+	AdSetId            string  `json:"adset_id"`
+	AdSetName          string  `json:"adset_name"`
+	AdId               string  `json:"ad_id"`
+	AdName             string  `json:"ad_name"`
+	Impressions        string  `json:"impressions"`
+	Clicks             int32   `json:"clicks"`
+	Spend              float32 `json:"spend"`
+	CostPerUniqueClick float32 `json:"cost_per_unique_click"`
 }
 
 func (a *FBAdInsight) getFileName() string {
@@ -224,6 +236,10 @@ func (s *FBAdService) getAdsFields() string {
 	return "name,account_id,adset{id,name},bid_amount,bid_info,bid_type,status,created_time,updated_time,campaign{id,name},creative{id,name}"
 }
 
+func (s *FBAdService) getAdInsightsFields() string {
+	return "date_start,date_stop,account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,clicks,spend,cost_per_unique_click"
+}
+
 func (s *FBAdService) getAdsURL() string {
 	path := fmt.Sprintf("act_%v/ads", s.AdAccount.Id)
 	return fmt.Sprintf("%v/%v/%v?access_token=%v&fields=%v&updated_since=%v", Endpoint, Version, path, s.AccessToken.Token, s.getAdsFields(), s.DailyCatch.Day.Unix())
@@ -237,6 +253,7 @@ func (s *FBAdService) getInsightsURL(date time.Time) string {
 	v.Set("time_range", d)
 	v.Set("access_token", s.AccessToken.Token)
 	v.Set("level", "ad")
+	v.Set("fields", s.getAdInsightsFields())
 	return fmt.Sprintf("%v/%v/%v?%v", Endpoint, Version, path, v.Encode())
 }
 
@@ -307,6 +324,6 @@ func (s *FBAdService) StoreInsights() {
 }
 
 func (s *FBAdService) Store() {
-	s.StoreAds()
+	// s.StoreAds()
 	s.StoreInsights()
 }
