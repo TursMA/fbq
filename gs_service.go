@@ -31,8 +31,8 @@ func GSStore(c interface{}, fileName string) {
 
 	file := strings.NewReader(b.String())
 
-	if res, err := getGSService(getGoogleHttpClient()).Objects.Insert(bucketName, object).Media(file).Do(); err == nil {
-		fmt.Printf("Created object %v at location %v\n\n", res.Name, res.SelfLink)
+	if _, err := getGSService(getGoogleHttpClient()).Objects.Insert(bucketName, object).Media(file).Do(); err == nil {
+		// fmt.Printf("Created object %v at location %v\n\n", res.Name, res.SelfLink)
 	} else {
 		log.Printf("Objects.Insert failed: %v\n", err)
 		time.Sleep(10 * time.Second)

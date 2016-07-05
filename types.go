@@ -5,6 +5,7 @@ import (
 	"fmt"
 	bigquery "google.golang.org/api/bigquery/v2"
 	// "io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -54,6 +55,9 @@ func (a *FBApp) getRenewUrl(previousToken string) string {
 func (a *FBApp) RenewToken(s string) *FBAccessToken {
 	resp, err := http.Get(a.getRenewUrl(s))
 	catchError(err)
+	if resp.StatusCode != 200 {
+		log.Fatalln("Error reading the token")
+	}
 	defer resp.Body.Close()
 	// body, _ := ioutil.ReadAll(resp.Body)
 	dec := json.NewDecoder(resp.Body)
@@ -260,6 +264,9 @@ func (s *FBAdService) getInsightsURL(date time.Time) string {
 func (s *FBAdService) GetAdsPage(url string) {
 	resp, err := http.Get(url)
 	catchError(err)
+	if resp.StatusCode != 200 {
+		log.Fatalf("Error reading the insights: %v\n", url)
+	}
 	defer resp.Body.Close()
 	dec := json.NewDecoder(resp.Body)
 	var d struct {
@@ -276,9 +283,11 @@ func (s *FBAdService) GetAdsPage(url string) {
 }
 
 func (s *FBAdService) GetAdInsightsPage(url string) {
-	fmt.Println(url)
 	resp, err := http.Get(url)
 	catchError(err)
+	if resp.StatusCode != 200 {
+		log.Fatalf("Error reading the insights: %v\n", url)
+	}
 	defer resp.Body.Close()
 	dec := json.NewDecoder(resp.Body)
 	var d struct {
@@ -324,6 +333,6 @@ func (s *FBAdService) StoreInsights() {
 }
 
 func (s *FBAdService) Store() {
-	// s.StoreAds()
+	s.StoreAds()
 	s.StoreInsights()
 }
