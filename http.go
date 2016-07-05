@@ -14,7 +14,7 @@ func HttpGet(url string) *http.Response {
 	if resp.StatusCode != 200 {
 		if resp.StatusCode == 400 || resp.StatusCode == 500 {
 			fmt.Printf("RETRY--- ERROR %v while getting %v -----\n", resp.Status, url)
-			time.Sleep(10 * time.Minute)
+			time.Sleep(10 * time.Second)
 			return HttpGet(url)
 		} else {
 			log.Fatalf("----- ERROR %v while getting %v -----\n", resp.Status, url)
