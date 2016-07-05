@@ -78,7 +78,8 @@ func Run() {
 		t := newFBAccessToken(conf.Apps[account.App].Token)
 		as := newFBAdService(dc, a, t)
 		wg.Add(1)
-		go func() {
+		// go func() {
+		func() {
 			as.GetAds()
 			as.GetAdInsights()
 			as.Store()
