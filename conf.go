@@ -15,6 +15,7 @@ type ConfApp struct {
 	ClientId     string `json:"client_id"`
 	ClientSecret string `json:"client_id"`
 	Token        string `json:"token"`
+	Expires      int32  `json:"expires_in"`
 }
 
 type Conf struct {
@@ -40,7 +41,7 @@ func LoadConf() *Conf {
 	return c
 }
 
-func (c *Conf) AddApp(clientId, clientSecret, token string) {
+func (c *Conf) AddApp(clientId, clientSecret, token string, expires int32) {
 	if c.Apps == nil {
 		c.Apps = make(map[string]*ConfApp)
 	}
@@ -48,6 +49,7 @@ func (c *Conf) AddApp(clientId, clientSecret, token string) {
 		ClientId:     clientId,
 		ClientSecret: clientSecret,
 		Token:        token,
+		Expires:      expires,
 	}
 }
 

@@ -47,7 +47,7 @@ func Token() {
 	accessToken := app.RenewToken(previousToken)
 
 	conf := LoadConf()
-	conf.AddApp(clientId, clientSecret, accessToken.Token)
+	conf.AddApp(clientId, clientSecret, accessToken.Token, accessToken.Expires)
 	conf.Save()
 }
 

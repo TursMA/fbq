@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	bigquery "google.golang.org/api/bigquery/v2"
+	// "io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
@@ -17,8 +18,9 @@ const (
 )
 
 type FBAccessToken struct {
-	Token   string
-	Expires int32
+	Token     string `json:"access_token"`
+	TokenType string `json:"token_type"`
+	Expires   int32  `json:"expires_in"`
 }
 
 func newFBAccessToken(s string) *FBAccessToken {
@@ -53,12 +55,16 @@ func (a *FBApp) RenewToken(s string) *FBAccessToken {
 	resp, err := http.Get(a.getRenewUrl(s))
 	catchError(err)
 	defer resp.Body.Close()
+	// body, _ := ioutil.ReadAll(resp.Body)
 	dec := json.NewDecoder(resp.Body)
-	var d struct {
-		AccessToken string `json:"access_token"`
-	}
-	catchError(dec.Decode(&d))
-	return newFBAccessToken(d.AccessToken)
+	//	var d struct {
+	//		AccessToken string `json:"access_token"`
+	//		TokenType   string `json:"token_type"`
+	//		ExpiresIn   int32  `json:"expires_in"`
+	//	}
+	d := new(FBAccessToken)
+	catchError(dec.Decode(d))
+	return d
 }
 
 type FBAdAccount struct {
