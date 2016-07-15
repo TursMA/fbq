@@ -5,6 +5,7 @@ import (
 	"fmt"
 	bigquery "google.golang.org/api/bigquery/v2"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -25,6 +26,16 @@ func newFBAccessToken(s string) *FBAccessToken {
 	t := new(FBAccessToken)
 	t.Token = s
 	return t
+}
+
+type FBPixel struct {
+	Id string
+}
+
+func newFBPixel(pixelId string) *FBPixel {
+	a := new(FBPixel)
+	a.Id = pixelId
+	return a
 }
 
 type FBApp struct {
@@ -69,12 +80,19 @@ func newFBAdAccount(id string) *FBAdAccount {
 }
 
 type DailyCatch struct {
-	Day time.Time
+	Day         time.Time
+	Orders      []*FBOrder
+	AccessToken *FBAccessToken
+	App         *FBApp
+	Pixel       *FBPixel
 }
 
-func newDailyCatch(d time.Time) *DailyCatch {
+func newDailyCatch(d time.Time, t *FBAccessToken, a *FBApp, p *FBPixel) *DailyCatch {
 	dc := new(DailyCatch)
 	dc.Day = d
+	dc.AccessToken = t
+	dc.App = a
+	dc.Pixel = p
 	return dc
 }
 
@@ -118,13 +136,7 @@ func (d *DailyCatch) BQAdInsightSchema() *bigquery.TableSchema {
 			{Mode: "NULLABLE", Name: "date_start", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "date_stop", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "account_id", Type: "STRING"},
-			// {Mode: "NULLABLE", Name: "account_name", Type: "STRING"},
-			// {Mode: "NULLABLE", Name: "campaign_id", Type: "STRING"},
-			// {Mode: "NULLABLE", Name: "campaign_name", Type: "STRING"},
-			// {Mode: "NULLABLE", Name: "adset_id", Type: "STRING"},
-			// {Mode: "NULLABLE", Name: "adset_name", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "ad_id", Type: "STRING"},
-			// {Mode: "NULLABLE", Name: "ad_name", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "impressions", Type: "STRING"},
 			{Mode: "NULLABLE", Name: "unique_impressions", Type: "INTEGER"},
 			{Mode: "NULLABLE", Name: "clicks", Type: "INTEGER"},
@@ -134,9 +146,31 @@ func (d *DailyCatch) BQAdInsightSchema() *bigquery.TableSchema {
 	}
 }
 
+func (d *DailyCatch) BQOrderSchema() *bigquery.TableSchema {
+	return &bigquery.TableSchema{
+		Fields: []*bigquery.TableFieldSchema{
+			{Mode: "NULLABLE", Name: "order_id", Type: "STRING"},
+			{Mode: "NULLABLE", Name: "pixel_id", Type: "STRING"},
+			{Mode: "NULLABLE", Name: "conversion_device", Type: "STRING"},
+			{Mode: "NULLABLE", Name: "order_timestamp", Type: "STRING"},
+			{Mode: "NULLABLE", Name: "attribution_type", Type: "STRING"},
+			{Mode: "REPEATED", Name: "attributions", Type: "RECORD", Fields: []*bigquery.TableFieldSchema{
+				{Mode: "NULLABLE", Name: "ad_id", Type: "STRING"},
+				{Mode: "NULLABLE", Name: "action_type", Type: "STRING"},
+				{Mode: "NULLABLE", Name: "impression_cost", Type: "FLOAT"},
+				{Mode: "NULLABLE", Name: "click_cost", Type: "FLOAT"},
+				{Mode: "NULLABLE", Name: "impression_timestamp", Type: "STRING"},
+				{Mode: "NULLABLE", Name: "placement", Type: "STRING"},
+				{Mode: "NULLABLE", Name: "device", Type: "STRING"},
+			}},
+		},
+	}
+}
+
 func (d *DailyCatch) ToBQ() {
 	writeBQTable("facebook/ads/*", "ads", d.BQAdSchema())
 	writeBQTable("facebook/insights/*", "insights", d.BQAdInsightSchema())
+	writeBQTable("facebook/orders/*", "orders", d.BQOrderSchema())
 }
 
 type FBAdSet struct {
@@ -181,16 +215,10 @@ func (a *FBAd) Store() {
 }
 
 type FBAdInsight struct {
-	DateStart string `json:"date_start"`
-	DateStop  string `json:"date_stop"`
-	AccountId string `json:"account_id"`
-	// AccountName       string  `json:"account_name"`
-	// CampaignId        string  `json:"campaign_id"`
-	// CampaignName      string  `json:"campaign_name"`
-	// AdSetId           string  `json:"adset_id"`
-	// AdSetName         string  `json:"adset_name"`
-	AdId string `json:"ad_id"`
-	// AdName            string  `json:"ad_name"`
+	DateStart         string  `json:"date_start"`
+	DateStop          string  `json:"date_stop"`
+	AccountId         string  `json:"account_id"`
+	AdId              string  `json:"ad_id"`
 	Impressions       string  `json:"impressions"`
 	UniqueImpressions int32   `json:"unique_impressions"`
 	Clicks            int32   `json:"clicks"`
@@ -209,19 +237,47 @@ func (a *FBAdInsight) Store() {
 	GSStore(a, a.getFileName())
 }
 
-type FBAdService struct {
-	DailyCatch  *DailyCatch
-	AdAccount   *FBAdAccount
-	AccessToken *FBAccessToken
-	Ads         []*FBAd
-	AdInsights  []*FBAdInsight
+type FBOrder struct {
+	OrderId          string                `json:"order_id"`
+	PixelId          string                `json:"pixel_id"`
+	ConversionDevice string                `json:"conversion_device"`
+	OrderTimestamp   string                `json:"order_timestamp"`
+	AttributionType  string                `json:"attribution_type"`
+	Attributions     []*FBOrderAttribution `json:"attributions"`
 }
 
-func newFBAdService(dc *DailyCatch, a *FBAdAccount, t *FBAccessToken) *FBAdService {
+func (a *FBOrder) getFileName() string {
+	objectPrefix := "facebook/orders"
+	d, err := time.Parse("2006-01-02", a.OrderTimestamp[:10])
+	catchError(err)
+	return fmt.Sprintf("%v/%v/%v.json.gz", objectPrefix, d.Format("2006/01/02"), a.OrderId)
+}
+
+func (a *FBOrder) Store() {
+	GSStore(a, a.getFileName())
+}
+
+type FBOrderAttribution struct {
+	AdId                string  `json:"ad_id"`
+	ActionType          string  `json:"action_type"`
+	ImpressionCost      float32 `json:"impression_cost"`
+	ClickCost           float32 `json:"click_cost"`
+	ImpressionTimestamp string  `json:"impression_timestamp"`
+	Placement           string  `json:"placement"`
+	Device              string  `json:"device"`
+}
+
+type FBAdService struct {
+	DailyCatch *DailyCatch
+	AdAccount  *FBAdAccount
+	Ads        []*FBAd
+	AdInsights []*FBAdInsight
+}
+
+func newFBAdService(dc *DailyCatch, a *FBAdAccount) *FBAdService {
 	s := new(FBAdService)
 	s.DailyCatch = dc
 	s.AdAccount = a
-	s.AccessToken = t
 	return s
 }
 
@@ -236,7 +292,7 @@ func (s *FBAdService) getAdInsightsFields() string {
 
 func (s *FBAdService) getAdsURL() string {
 	path := fmt.Sprintf("act_%v/ads", s.AdAccount.Id)
-	return fmt.Sprintf("%v/%v/%v?access_token=%v&fields=%v&updated_since=%v", Endpoint, Version, path, s.AccessToken.Token, s.getAdsFields(), s.DailyCatch.Day.Unix())
+	return fmt.Sprintf("%v/%v/%v?access_token=%v&fields=%v&updated_since=%v", Endpoint, Version, path, s.DailyCatch.AccessToken.Token, s.getAdsFields(), s.DailyCatch.Day.Unix())
 }
 
 func (s *FBAdService) getInsightsURL(date time.Time) string {
@@ -245,7 +301,7 @@ func (s *FBAdService) getInsightsURL(date time.Time) string {
 	d := fmt.Sprintf(`{"since": "%v","until": "%v"}`, d0, d0)
 	v := url.Values{}
 	v.Set("time_range", d)
-	v.Set("access_token", s.AccessToken.Token)
+	v.Set("access_token", s.DailyCatch.AccessToken.Token)
 	v.Set("level", "ad")
 	v.Set("fields", s.getAdInsightsFields())
 	return fmt.Sprintf("%v/%v/%v?%v", Endpoint, Version, path, v.Encode())
@@ -285,6 +341,34 @@ func (s *FBAdService) GetAdInsightsPage(url string) {
 	}
 }
 
+func (dc *DailyCatch) getOrdersURL(date time.Time) string {
+	path := fmt.Sprintf("931150673581441/order_id_attributions")
+	v := url.Values{}
+	v.Set("since", fmt.Sprintf("%v", date.Unix()))
+	v.Set("until", fmt.Sprintf("%v", date.Unix()+60*60*24))
+	v.Set("app_id", dc.App.ClientId)
+	v.Set("pixel_id", dc.Pixel.Id)
+	v.Set("access_token", dc.AccessToken.Token)
+	return fmt.Sprintf("%v/%v/%v?%v", Endpoint, Version, path, v.Encode())
+}
+
+func (d *DailyCatch) GetOrdersPage(url string) {
+	resp := HttpGet(url)
+	defer resp.Body.Close()
+	dec := json.NewDecoder(resp.Body)
+	var data struct {
+		Orders []*FBOrder `json:"data"`
+		Paging struct {
+			Next string `json:"next"`
+		} `json:"paging"`
+	}
+	catchError(dec.Decode(&data))
+	d.Orders = append(d.Orders, data.Orders...)
+	if data.Paging.Next != "" {
+		d.GetOrdersPage(data.Paging.Next)
+	}
+}
+
 func (s *FBAdService) GetAds() {
 	s.Ads = make([]*FBAd, 0)
 	s.GetAdsPage(s.getAdsURL())
@@ -294,10 +378,36 @@ func (s *FBAdService) GetAdInsights() {
 	s.AdInsights = make([]*FBAdInsight, 0)
 	d := s.DailyCatch.Day
 	now := time.Now()
+	wg := new(sync.WaitGroup)
 	for now.Sub(d).Nanoseconds() > 0 {
-		s.GetAdInsightsPage(s.getInsightsURL(d))
+		wg.Add(1)
+		year, month, day := d.Date()
+		d0 := time.Date(year, month, day, 0, 0, 0, 0, d.Location())
+		go func() {
+			s.GetAdInsightsPage(s.getInsightsURL(d0))
+			wg.Done()
+		}()
 		d = d.AddDate(0, 0, 1)
 	}
+	wg.Wait()
+}
+
+func (dc *DailyCatch) GetOrders() {
+	dc.Orders = make([]*FBOrder, 0)
+	d := dc.Day.AddDate(0, 0, -10)
+	now := time.Now().AddDate(0, 0, -5)
+	wg := new(sync.WaitGroup)
+	for now.Sub(d).Nanoseconds() > 0 {
+		year, month, day := d.Date()
+		d0 := time.Date(year, month, day, 0, 0, 0, 0, d.Location())
+		wg.Add(1)
+		go func() {
+			dc.GetOrdersPage(dc.getOrdersURL(d0))
+			wg.Done()
+		}()
+		d = d.AddDate(0, 0, 1)
+	}
+	wg.Wait()
 }
 
 func (s *FBAdService) StoreAds() {
@@ -312,6 +422,19 @@ func (s *FBAdService) StoreInsights() {
 		ai := s.AdInsights[i]
 		ai.Store()
 	}
+}
+
+func (d *DailyCatch) StoreOrders() {
+	wg := new(sync.WaitGroup)
+	for i := 0; i < len(d.Orders); i++ {
+		wg.Add(1)
+		j := int(i)
+		go func() {
+			d.Orders[j].Store()
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
 
 func (s *FBAdService) Store() {

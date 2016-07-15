@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"os"
 )
 
 type ConfAccount struct {
@@ -21,6 +24,9 @@ type ConfApp struct {
 type Conf struct {
 	Accounts map[string]*ConfAccount `json:"accounts"`
 	Apps     map[string]*ConfApp     `json:"apps"`
+	Token    string                  `json:"token"`
+	PixelId  string                  `json:"pixel_id"`
+	AppId    string                  `json:"app_id"`
 }
 
 func (c *Conf) Save() {
@@ -38,7 +44,35 @@ func LoadConf() *Conf {
 	}
 	dec := json.NewDecoder(bytes.NewReader(body))
 	catchError(dec.Decode(&c))
+
+	c.Check()
+
 	return c
+}
+
+func (c *Conf) Check() {
+	if c.PixelId == "" || c.AppId == "" || c.Token == "" {
+		io := bufio.NewReader(os.Stdin)
+		if c.PixelId == "" {
+			var pixelId string
+			fmt.Println("Pixel Id:")
+			fmt.Fscan(io, &pixelId)
+			c.SetPixelId(pixelId)
+		}
+		if c.AppId == "" {
+			var appId string
+			fmt.Println("App Id:")
+			fmt.Fscan(io, &appId)
+			c.SetAppId(appId)
+		}
+		if c.Token == "" {
+			var token string
+			fmt.Println("Token:")
+			fmt.Fscan(io, &token)
+			c.SetToken(token)
+		}
+		c.Save()
+	}
 }
 
 func (c *Conf) AddApp(clientId, clientSecret, token string, expires int32) {
@@ -61,4 +95,16 @@ func (c *Conf) AddAccount(clientId, accountId string) {
 		App: clientId,
 		Id:  accountId,
 	}
+}
+
+func (c *Conf) SetPixelId(pixelId string) {
+	c.PixelId = pixelId
+}
+
+func (c *Conf) SetAppId(appId string) {
+	c.AppId = appId
+}
+
+func (c *Conf) SetToken(token string) {
+	c.Token = token
 }

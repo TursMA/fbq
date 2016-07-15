@@ -12,13 +12,17 @@ import (
 var (
 	googleCredPath string
 	delta          int
-	modToken       bool
+	modOrders      bool
+	modAds         bool
 	modAccount     bool
+	modBQ          bool
 	confFileName   string
 )
 
 func init() {
-	flagModToken := flag.Bool("token", false, "Add token")
+	flagModOrders := flag.Bool("orders", false, "Orders")
+	flagModAds := flag.Bool("ads", false, "Ads")
+	flagModBQ := flag.Bool("bq", false, "Send to BigQuery")
 	flagModAccount := flag.Bool("account", false, "Add account")
 	flagGoogleCredPath := flag.String("g", "", "Google JWT")
 	flagConfFilePath := flag.String("c", "conf.json", "Config file")
@@ -26,29 +30,11 @@ func init() {
 	flag.Parse()
 	googleCredPath = *flagGoogleCredPath
 	delta = *flagDelta
-	modToken = *flagModToken
+	modOrders = *flagModOrders
+	modAds = *flagModAds
+	modBQ = *flagModBQ
 	modAccount = *flagModAccount
 	confFileName = *flagConfFilePath
-}
-
-func Token() {
-	var clientId, clientSecret, previousToken string
-
-	io := bufio.NewReader(os.Stdin)
-
-	fmt.Println("Client Id:")
-	fmt.Fscan(io, &clientId)
-	fmt.Println("Client Secret:")
-	fmt.Fscan(io, &clientSecret)
-	fmt.Println("Short Token:")
-	fmt.Fscan(io, &previousToken)
-
-	app := newFBApp(clientId, clientSecret)
-	accessToken := app.RenewToken(previousToken)
-
-	conf := LoadConf()
-	conf.AddApp(clientId, clientSecret, accessToken.Token, accessToken.Expires)
-	conf.Save()
 }
 
 func Account() {
@@ -69,33 +55,46 @@ func Account() {
 func Run() {
 	conf := LoadConf()
 
-	dc := newDailyCatch(time.Now().AddDate(0, 0, -1*delta))
+	token := newFBAccessToken(conf.Token)
+	pixel := newFBPixel(conf.PixelId)
+	app := newFBApp(conf.AppId, "")
+
+	dc := newDailyCatch(time.Now().AddDate(0, 0, -1*delta), token, app, pixel)
 
 	wg := new(sync.WaitGroup)
 
-	for _, account := range conf.Accounts {
-		a := newFBAdAccount(account.Id)
-		t := newFBAccessToken(conf.Apps[account.App].Token)
-		as := newFBAdService(dc, a, t)
+	if modOrders {
 		wg.Add(1)
 		go func() {
-			as.GetAds()
-			as.GetAdInsights()
-			as.Store()
+			dc.GetOrders()
+			dc.StoreOrders()
 			wg.Done()
 		}()
 	}
 
+	if modAds {
+		for _, account := range conf.Accounts {
+			a := newFBAdAccount(account.Id)
+			as := newFBAdService(dc, a)
+			wg.Add(1)
+			go func() {
+				as.GetAds()
+				as.GetAdInsights()
+				as.Store()
+				wg.Done()
+			}()
+		}
+	}
+
 	wg.Wait()
 
-	dc.ToBQ()
-
+	if modBQ {
+		dc.ToBQ()
+	}
 }
 
 func main() {
-	if modToken {
-		Token()
-	} else if modAccount {
+	if modAccount {
 		Account()
 	} else {
 		Run()
