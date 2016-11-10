@@ -38,7 +38,7 @@ func init() {
 	modBQ = *flagModBQ
 	modAccount = *flagModAccount
 	confFileName = *flagConfFilePath
-	n, err := time.Parse(*flagNow, "2012-11-01")
+	n, err := time.Parse("2006-01-02", *flagNow)
 	if err != nil {
 		log.Fatalln(err)
 	} else {
