@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	storage "github.com/aeud/go_google_storage"
 	"log"
 	"os"
 	"sync"
@@ -19,6 +20,7 @@ var (
 	modBQ          bool
 	confFileName   string
 	now            time.Time
+	ss             *StorageService
 )
 
 func init() {
@@ -68,7 +70,7 @@ func Run() {
 	pixel := newFBPixel(conf.PixelId)
 	app := newFBApp(conf.AppId, "")
 
-	dc := newDailyCatch(time.Now().AddDate(0, 0, -1*delta), token, app, pixel)
+	dc := newDailyCatch(now.AddDate(0, 0, -1*delta), token, app, pixel)
 
 	wg := new(sync.WaitGroup)
 
@@ -97,12 +99,15 @@ func Run() {
 
 	wg.Wait()
 
+	ss.Wait()
+
 	if modBQ {
 		dc.ToBQ()
 	}
 }
 
 func main() {
+	ss = NewStorageService(storage.NewStorageClient(googleCredPath))
 	if modAccount {
 		Account()
 	} else {

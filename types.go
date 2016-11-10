@@ -211,19 +211,21 @@ func (a *FBAd) getFileName() string {
 }
 
 func (a *FBAd) Store() {
-	GSStore(a, a.getFileName())
+	bs, err := json.Marshal(a)
+	catchError(err)
+	ss.AddFile(NewFileToStore(bs, a.getFileName()))
 }
 
 type FBAdInsight struct {
-	DateStart         string  `json:"date_start"`
-	DateStop          string  `json:"date_stop"`
-	AccountId         string  `json:"account_id"`
-	AdId              string  `json:"ad_id"`
-	Impressions       string  `json:"impressions"`
-	UniqueImpressions int32   `json:"unique_impressions"`
-	Clicks            int32   `json:"clicks"`
-	UniqueClicks      int32   `json:"unique_clicks"`
-	Spend             float32 `json:"spend"`
+	DateStart         string `json:"date_start"`
+	DateStop          string `json:"date_stop"`
+	AccountId         string `json:"account_id"`
+	AdId              string `json:"ad_id"`
+	Impressions       string `json:"impressions"`
+	UniqueImpressions string `json:"unique_impressions"`
+	Clicks            string `json:"clicks"`
+	UniqueClicks      string `json:"unique_clicks"`
+	Spend             string `json:"spend"`
 }
 
 func (a *FBAdInsight) getFileName() string {
@@ -234,7 +236,9 @@ func (a *FBAdInsight) getFileName() string {
 }
 
 func (a *FBAdInsight) Store() {
-	GSStore(a, a.getFileName())
+	bs, err := json.Marshal(a)
+	catchError(err)
+	ss.AddFile(NewFileToStore(bs, a.getFileName()))
 }
 
 type FBOrder struct {
@@ -254,7 +258,9 @@ func (a *FBOrder) getFileName() string {
 }
 
 func (a *FBOrder) Store() {
-	GSStore(a, a.getFileName())
+	bs, err := json.Marshal(a)
+	catchError(err)
+	ss.AddFile(NewFileToStore(bs, a.getFileName()))
 }
 
 type FBOrderAttribution struct {
@@ -394,7 +400,7 @@ func (s *FBAdService) GetAdInsights() {
 func (dc *DailyCatch) GetOrders() {
 	dc.Orders = make([]*FBOrder, 0)
 	d := dc.Day.AddDate(0, 0, -10)
-	now := time.Now().AddDate(0, 0, -5)
+	// now := now.AddDate(0, 0, -5)
 	wg := new(sync.WaitGroup)
 	for now.Sub(d).Nanoseconds() > 0 {
 		year, month, day := d.Date()

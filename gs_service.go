@@ -1,41 +1,72 @@
 package main
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/json"
-	// "fmt"
-	storage "google.golang.org/api/storage/v1"
+	"fmt"
+	storage "github.com/aeud/go_google_storage"
 	"log"
-	"net/http"
-	"strings"
-	"time"
+	"sync"
 )
 
-func getGSService(client *http.Client) *storage.Service {
-	service, err := storage.New(client)
-	catchError(err)
-	return service
+const (
+	cores int = 10
+)
+
+type FileToStore struct {
+	bs       []byte
+	filename string
+	wg       *sync.WaitGroup
 }
 
-func GSStore(c interface{}, fileName string) {
+func NewFileToStore(bs []byte, filename string) *FileToStore {
+	fts := new(FileToStore)
+	fts.bs = bs
+	fts.filename = filename
+	return fts
+}
 
-	object := &storage.Object{Name: fileName}
+func (fts *FileToStore) Store(service *storage.StorageClient) {
+	service.Store("lx-ga", fts.filename, fts.bs)
+}
 
-	var b bytes.Buffer
-	w := gzip.NewWriter(&b)
-	bs, err := json.Marshal(c)
-	catchError(err)
-	w.Write(bs)
-	w.Close()
+func (fts *FileToStore) Stringer() string {
+	return fmt.Sprintf("%v", fts.filename)
+}
 
-	file := strings.NewReader(b.String())
+func (fts *FileToStore) StringerLogger() string {
+	return fmt.Sprintf("Stored %v", fts.filename)
+}
 
-	if _, err := getGSService(getGoogleHttpClient()).Objects.Insert(bucketName, object).Media(file).Do(); err == nil {
-		// fmt.Printf("Created object %v at location %v\n\n", res.Name, res.SelfLink)
-	} else {
-		log.Printf("Objects.Insert failed: %v\n", err)
-		time.Sleep(10 * time.Second)
-		GSStore(c, fileName)
+func (fts *FileToStore) Logger() {
+	log.Println(fts.StringerLogger())
+}
+
+type StorageService struct {
+	ch chan *FileToStore
+	wg *sync.WaitGroup
+}
+
+func NewStorageService(service *storage.StorageClient) *StorageService {
+	ss := new(StorageService)
+	ss.ch = make(chan *FileToStore)
+	ss.wg = new(sync.WaitGroup)
+	for i := 0; i < cores; i++ {
+		go func(ss *StorageService) {
+			for {
+				fts := <-ss.ch
+				fts.Store(service)
+				fts.Logger()
+				ss.wg.Done()
+			}
+		}(ss)
 	}
+	return ss
+}
+
+func (ss *StorageService) Wait() {
+	ss.wg.Wait()
+}
+
+func (ss *StorageService) AddFile(fts *FileToStore) {
+	ss.wg.Add(1)
+	ss.ch <- fts
 }
