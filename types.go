@@ -377,7 +377,6 @@ func (s *FBAdService) GetAds() {
 func (s *FBAdService) GetAdInsights() {
 	s.AdInsights = make([]*FBAdInsight, 0)
 	d := s.DailyCatch.Day
-	now := time.Now()
 	wg := new(sync.WaitGroup)
 	for now.Sub(d).Nanoseconds() > 0 {
 		wg.Add(1)

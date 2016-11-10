@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ var (
 	modAccount     bool
 	modBQ          bool
 	confFileName   string
+	now            time.Time
 )
 
 func init() {
@@ -27,6 +29,7 @@ func init() {
 	flagGoogleCredPath := flag.String("g", "", "Google JWT")
 	flagConfFilePath := flag.String("c", "conf.json", "Config file")
 	flagDelta := flag.Int("d", 10, "Delta")
+	flagNow := flag.String("now", time.Now().Format("2012-11-01"), "Date")
 	flag.Parse()
 	googleCredPath = *flagGoogleCredPath
 	delta = *flagDelta
@@ -35,6 +38,12 @@ func init() {
 	modBQ = *flagModBQ
 	modAccount = *flagModAccount
 	confFileName = *flagConfFilePath
+	n, err := time.Parse(*flagNow, "2012-11-01")
+	if err != nil {
+		log.Fatalln(err)
+	} else {
+		now = n
+	}
 }
 
 func Account() {
