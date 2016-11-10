@@ -11,7 +11,7 @@ import (
 
 const (
 	Endpoint  string = "https://graph.facebook.com"
-	Version   string = "v2.6"
+	Version   string = "v2.8"
 	projectId string = "luxola.com:luxola-analytics"
 	datasetId string = "facebook"
 )
