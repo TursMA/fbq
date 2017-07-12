@@ -4,11 +4,12 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	storage "github.com/aeud/go_google_storage"
 	"log"
 	"os"
 	"sync"
 	"time"
+
+	storage "github.com/luxola/selenium/utils/storage"
 )
 
 var (

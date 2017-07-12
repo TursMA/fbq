@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	storage "github.com/aeud/go_google_storage"
 	"log"
 	"sync"
+
+	storage "github.com/luxola/selenium/utils/storage"
 )
 
 const (
@@ -25,6 +26,7 @@ func NewFileToStore(bs []byte, filename string) *FileToStore {
 }
 
 func (fts *FileToStore) Store(service *storage.StorageClient) {
+	fmt.Println(string(fts.bs))
 	service.Store("lx-ga", fts.filename, fts.bs)
 }
 

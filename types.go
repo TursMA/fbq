@@ -3,15 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	bigquery "google.golang.org/api/bigquery/v2"
 	"net/url"
 	"sync"
 	"time"
+
+	bigquery "google.golang.org/api/bigquery/v2"
 )
 
 const (
 	Endpoint  string = "https://graph.facebook.com"
-	Version   string = "v2.8"
+	Version   string = "v2.9"
 	projectId string = "luxola.com:luxola-analytics"
 	datasetId string = "facebook"
 )
@@ -217,15 +218,15 @@ func (a *FBAd) Store() {
 }
 
 type FBAdInsight struct {
-	DateStart         string `json:"date_start"`
-	DateStop          string `json:"date_stop"`
-	AccountId         string `json:"account_id"`
-	AdId              string `json:"ad_id"`
-	Impressions       string `json:"impressions"`
-	UniqueImpressions string `json:"unique_impressions"`
-	Clicks            string `json:"clicks"`
-	UniqueClicks      string `json:"unique_clicks"`
-	Spend             string `json:"spend"`
+	DateStart   string `json:"date_start"`
+	DateStop    string `json:"date_stop"`
+	AccountId   string `json:"account_id"`
+	AdId        string `json:"ad_id"`
+	Impressions string `json:"impressions"`
+	// UniqueImpressions *string `json:"unique_impressions"`
+	Clicks       string `json:"clicks"`
+	UniqueClicks string `json:"unique_clicks"`
+	Spend        string `json:"spend"`
 }
 
 func (a *FBAdInsight) getFileName() string {
@@ -293,7 +294,7 @@ func (s *FBAdService) getAdsFields() string {
 
 func (s *FBAdService) getAdInsightsFields() string {
 	// return "date_start,date_stop,account_id,account_name,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,impressions,unique_impressions,clicks,unique_clicks,spend"
-	return "date_start,date_stop,account_id,ad_id,impressions,unique_impressions,clicks,unique_clicks,spend"
+	return "date_start,date_stop,account_id,ad_id,impressions,clicks,unique_clicks,spend"
 }
 
 func (s *FBAdService) getAdsURL() string {
